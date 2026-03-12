@@ -5,15 +5,15 @@ import pandas as pd
 # ページ設定
 st.set_page_config(page_title="PDF解析ツール", layout="centered")
 
-# --- 「青いバー・白抜き日本語文字」を実現する徹底カスタマイズ ---
+# --- ダークモード/ライトモード不問：視認性固定デザイン ---
 st.markdown("""
     <style>
-    /* 全体の背景を白に固定 */
+    /* 1. 背景を常に白に固定 */
     .stApp {
         background-color: #ffffff !important;
     }
-    
-    /* 1. アップロードエリア本体：濃い青 */
+
+    /* 2. アップロードバー全体を濃い青に固定 */
     [data-testid="stFileUploader"] {
         background-color: #1e3a8a !important; 
         border: 2px dashed #3b82f6 !important;
@@ -21,26 +21,34 @@ st.markdown("""
         padding: 30px 20px !important;
     }
 
-    /* 2. 「Drag and drop file here」を消して日本語の白文字を上書き */
-    [data-testid="stFileUploader"] section > div > div > span {
-        display: none !important; /* 元の英語を消す */
+    /* 3. バーの中央部分（ドロップエリア）も青に固定し、文字を白抜きに */
+    [data-testid="stFileUploader"] section {
+        background-color: #1e3a8a !important;
+        border: none !important;
     }
+
+    /* 元の英語テキストを消す */
+    [data-testid="stFileUploader"] section > div > div > span {
+        display: none !important;
+    }
+
+    /* 日本語の白抜き文字を挿入（太字でくっきり） */
     [data-testid="stFileUploader"] section > div > div::before {
-        content: "ここにファイルをドロップしてください (PDF)"; /* 日本語を挿入 */
+        content: "ここにファイルをドロップしてください (PDF)";
         color: #ffffff !important;
         font-weight: bold !important;
         font-size: 1.2rem !important;
         display: block;
         margin-bottom: 10px;
     }
-    
-    /* 3. 小さい文字 (Limit 200MB...) も白く */
+
+    /* 補助テキスト（容量制限など）も白く */
     [data-testid="stFileUploader"] section > div > small {
-        color: #cbd5e1 !important; /* 薄い水色（白系） */
+        color: #e2e8f0 !important;
         font-weight: normal !important;
     }
 
-    /* 4. 「Browse files」ボタンを白背景・青文字に */
+    /* 4. ボタンを白背景・青文字で固定 */
     [data-testid="stFileUploader"] button {
         background-color: #ffffff !important;
         color: #1e3a8a !important;
@@ -48,19 +56,22 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 5. 解析結果エリアの文字を黒に固定 */
-    .main .block-container {
-        color: #000000 !important;
-    }
-    h1, h2, h3, p, span, label, td {
+    /* 5. 結果エリアの文字を常に「黒」に固定（白飛び防止） */
+    h1, h2, h3, p, span, label, td, .stMarkdown {
         color: #000000 !important;
     }
 
-    /* タイトル */
+    /* タイトルデザイン */
     h1 {
         color: #1e3a8a !important;
         text-align: center;
-        margin-bottom: 40px !important;
+        margin-bottom: 30px !important;
+    }
+
+    /* 表のスタイル */
+    thead tr th {
+        background-color: #1e3a8a !important;
+        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -68,7 +79,6 @@ st.markdown("""
 # --- 画面構成 ---
 st.title("PDF解析ツール")
 
-# アップローダー本体
 uploaded_file = st.file_uploader(
     "PDFアップロード", 
     type="pdf", 
@@ -117,7 +127,7 @@ if uploaded_file is not None:
                     i_list.append({
                         "ページ": i+1,
                         "DPI": dpi,
-                        "カラー": img.get("colorspace", "N/A"),
+                        "モード": img.get("colorspace", "N/A"),
                         "判定": "OK" if dpi>=300 else "⚠️ 低"
                     })
             if i_list:
@@ -127,7 +137,6 @@ if uploaded_file is not None:
         doc.close()
 
     except Exception:
-        st.error("解析エラーが発生しました。")
+        st.error("エラーが発生しました。")
 else:
-    # 待機中のメッセージ
     st.markdown("<p style='text-align: center; font-weight: bold; color: #1e3a8a; padding: 40px;'>上の青い枠にPDFをドロップしてください</p>", unsafe_allow_html=True)
