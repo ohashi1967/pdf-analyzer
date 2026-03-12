@@ -5,40 +5,51 @@ import pandas as pd
 # ページ設定
 st.set_page_config(page_title="PDF解析ツール", layout="centered")
 
-# 画像のデザインに合わせたカスタムCSS
+# 強制的に「白背景・濃い文字」にするための修正CSS
 st.markdown("""
     <style>
-    /* 全体の背景色 */
+    /* 全体の背景（薄いグレー） */
     .stApp {
-        background-color: #f0f4f8;
+        background-color: #f0f4f8 !important;
     }
-    /* メインコンテンツのカード表示 */
+    
+    /* 中央のカード（白背景・濃い文字を強制） */
     .main .block-container {
-        background-color: #ffffff;
+        background-color: #ffffff !important;
+        color: #333333 !important; /* 濃いグレーの文字 */
         padding: 40px;
         border-radius: 15px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         margin-top: 50px;
         margin-bottom: 50px;
     }
-    /* タイトルのスタイル */
-    h1 {
-        color: #3b5998;
-        font-size: 24px !important;
-        border-bottom: 2px solid #3b5998;
-        padding-bottom: 10px;
+
+    /* タイトル（濃い青） */
+    h1, h2, h3 {
+        color: #1a3a6d !important;
     }
-    /* アップローダーの枠線カスタマイズ */
+
+    /* 各種テキストの色の固定 */
+    p, span, label, .stMarkdown {
+        color: #333333 !important;
+    }
+
+    /* アップローダーの枠 */
     [data-testid="stFileUploader"] {
-        border: 2px dashed #3b5998;
+        border: 2px dashed #1a3a6d !important;
         border-radius: 10px;
-        padding: 20px;
-        background-color: #f8fbff;
+        background-color: #f8fbff !important;
     }
-    /* テーブルヘッダーの青背景再現 */
+
+    /* テーブルのヘッダー */
     thead tr th {
-        background-color: #3b5998 !important;
-        color: white !important;
+        background-color: #1a3a6d !important;
+        color: #ffffff !important;
+    }
+
+    /* メトリック（数字）のラベルと値 */
+    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
+        color: #333333 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -46,26 +57,26 @@ st.markdown("""
 # --- ヘッダー ---
 st.title("📄 PDF内部構造 解析ツール")
 
-# --- アップロードエリア (画像の中央配置を再現) ---
-uploaded_file = st.file_uploader("ここにファイルをドロップ (PDFのみ)", type="pdf", label_visibility="collapsed")
+# --- アップロードエリア ---
+uploaded_file = st.file_uploader("PDFファイルをアップロード", type="pdf", label_visibility="collapsed")
 
 if uploaded_file is not None:
-    # PDFをメモリ上で読み込み
     file_bytes = uploaded_file.read()
     doc = fitz.open(stream=file_bytes, filetype="pdf")
 
-    # --- 基本情報のカード表示 ---
     st.write("### 📋 基本情報")
     col1, col2, col3 = st.columns(3)
     pdf_version = doc.metadata.get("format", "Unknown")
-    col1.metric("PDFバージョン", pdf_version)
-    col2.metric("総ページ数", f"{len(doc)}")
-    col3.metric("サイズ", f"{len(file_bytes) / 1024:.1f} KB")
-
-    # --- 解析結果テーブル (画像の下部テーブルを再現) ---
-    st.write("### 🔍 解析データ")
     
-    # フォントと画像を統合したデータリストの作成
+    with col1:
+        st.metric("PDFバージョン", pdf_version)
+    with col2:
+        st.metric("総ページ数", f"{len(doc)}")
+    with col3:
+        st.metric("サイズ", f"{len(file_bytes) / 1024:.1f} KB")
+
+    st.write("---")
+
     tab1, tab2 = st.tabs(["🔤 フォント", "🖼️ 画像解像度"])
 
     with tab1:
@@ -73,12 +84,14 @@ if uploaded_file is not None:
         for page in doc:
             for f in page.get_fonts():
                 font_list.append({
-                    "場所/P.": "全ページ", 
                     "抽出されたフォント": f[3], 
                     "状態": "✅ 埋込済" if f[4] != 0 else "❌ 未埋込"
                 })
-        df_font = pd.DataFrame(font_list).drop_duplicates()
-        st.table(df_font)
+        if font_list:
+            df_font = pd.DataFrame(font_list).drop_duplicates()
+            st.table(df_font)
+        else:
+            st.info("フォント情報はありません。")
 
     with tab2:
         img_list = []
@@ -86,25 +99,22 @@ if uploaded_file is not None:
             page = doc[page_index]
             for img in page.get_image_info(hashes=True):
                 bbox = img["bbox"]
-                width_inch = (bbox[2] - bbox[0]) / 72
-                height_inch = (bbox[3] - bbox[1]) / 72
-                dpi = round(max(img["width"] / width_inch, img["height"] / height_inch))
+                w_inch = (bbox[2] - bbox[0]) / 72
+                h_inch = (bbox[3] - bbox[1]) / 72
+                dpi = round(max(img["width"] / w_inch, img["height"] / h_inch)) if w_inch > 0 else 0
                 
                 img_list.append({
-                    "ページ": page_index + 1,
-                    "ピクセル": f"{img['width']}x{img['height']}",
-                    "判定DPI": dpi,
-                    "結果": "OK" if dpi >= 300 else "低解像度"
+                    "P.": page_index + 1,
+                    "解像度(DPI)": dpi,
+                    "モード": img.get("colorspace", "N/A"),
+                    "判定": "OK" if dpi >= 300 else "⚠️ 低"
                 })
         
         if img_list:
-            df_img = pd.DataFrame(img_list)
-            st.dataframe(df_img, use_container_width=True)
+            st.dataframe(pd.DataFrame(img_list), use_container_width=True)
         else:
             st.info("画像は見つかりませんでした。")
 
     doc.close()
 else:
-    # 未アップロード時のプレースホルダー
-    st.write("")
-    st.markdown("<p style='text-align: center; color: #888;'>ファイルをドロップしてください</p>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; padding: 50px; color: #666;'>ファイルをドロップしてください</div>", unsafe_allow_html=True)
