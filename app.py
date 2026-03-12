@@ -5,15 +5,15 @@ import pandas as pd
 # ページ設定
 st.set_page_config(page_title="PDF解析ツール", layout="centered")
 
-# --- ダークモード/ライトモード不問：視認性固定デザイン ---
+# --- アイコン・文字を全て白抜き、文言を「ここにPDFをドロップ」に変更 ---
 st.markdown("""
     <style>
-    /* 1. 背景を常に白に固定 */
+    /* 全体の背景を白に固定 */
     .stApp {
         background-color: #ffffff !important;
     }
 
-    /* 2. アップロードバー全体を濃い青に固定 */
+    /* 1. アップロードバー全体：濃い青 */
     [data-testid="stFileUploader"] {
         background-color: #1e3a8a !important; 
         border: 2px dashed #3b82f6 !important;
@@ -21,20 +21,26 @@ st.markdown("""
         padding: 30px 20px !important;
     }
 
-    /* 3. バーの中央部分（ドロップエリア）も青に固定し、文字を白抜きに */
+    /* 2. ドロップエリア中央：濃い青 */
     [data-testid="stFileUploader"] section {
         background-color: #1e3a8a !important;
         border: none !important;
     }
 
-    /* 元の英語テキストを消す */
+    /* 3. 雲のマーク（アイコン）を白抜きに */
+    [data-testid="stFileUploader"] svg {
+        fill: #ffffff !important;
+        color: #ffffff !important;
+    }
+
+    /* 元の英語テキストを非表示 */
     [data-testid="stFileUploader"] section > div > div > span {
         display: none !important;
     }
 
-    /* 日本語の白抜き文字を挿入（太字でくっきり） */
+    /* 指定の日本語文言を挿入（白抜き・太字） */
     [data-testid="stFileUploader"] section > div > div::before {
-        content: "ここにファイルをドロップしてください (PDF)";
+        content: "ここにPDFをドロップ";
         color: #ffffff !important;
         font-weight: bold !important;
         font-size: 1.2rem !important;
@@ -42,13 +48,12 @@ st.markdown("""
         margin-bottom: 10px;
     }
 
-    /* 補助テキスト（容量制限など）も白く */
+    /* 補助テキストも白 */
     [data-testid="stFileUploader"] section > div > small {
         color: #e2e8f0 !important;
-        font-weight: normal !important;
     }
 
-    /* 4. ボタンを白背景・青文字で固定 */
+    /* 4. ボタン：白背景・青文字 */
     [data-testid="stFileUploader"] button {
         background-color: #ffffff !important;
         color: #1e3a8a !important;
@@ -56,19 +61,18 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 5. 結果エリアの文字を常に「黒」に固定（白飛び防止） */
+    /* 5. 結果エリア：常に黒文字 */
     h1, h2, h3, p, span, label, td, .stMarkdown {
         color: #000000 !important;
     }
 
-    /* タイトルデザイン */
+    /* タイトル */
     h1 {
         color: #1e3a8a !important;
         text-align: center;
-        margin-bottom: 30px !important;
     }
 
-    /* 表のスタイル */
+    /* テーブルヘッダー */
     thead tr th {
         background-color: #1e3a8a !important;
         color: #ffffff !important;
@@ -114,7 +118,7 @@ if uploaded_file is not None:
             if f_list:
                 st.table(pd.DataFrame(f_list).drop_duplicates())
             else:
-                st.info("フォント情報はありません")
+                st.info("フォント情報なし")
 
         with tab2:
             st.write("#### 画像解像度チェック")
@@ -127,13 +131,12 @@ if uploaded_file is not None:
                     i_list.append({
                         "ページ": i+1,
                         "DPI": dpi,
-                        "モード": img.get("colorspace", "N/A"),
                         "判定": "OK" if dpi>=300 else "⚠️ 低"
                     })
             if i_list:
                 st.dataframe(pd.DataFrame(i_list), use_container_width=True)
             else:
-                st.info("画像はありません")
+                st.info("画像なし")
         doc.close()
 
     except Exception:
