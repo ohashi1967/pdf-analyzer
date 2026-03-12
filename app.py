@@ -18,7 +18,7 @@ if uploaded_file is not None:
     # --- 基本情報の表示 ---
     st.subheader("基本情報")
     col1, col2, col3 = st.columns(3)
-    col1.metric("PDFバージョン", doc.pdf_get_version())
+    col1.metric("PDFバージョン", doc.metadata.get("format", "Unknown"))
     col2.metric("総ページ数", len(doc))
     col3.metric("ファイルサイズ", f"{len(file_bytes) / 1024:.1f} KB")
 
