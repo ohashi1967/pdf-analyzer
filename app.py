@@ -5,71 +5,75 @@ import pandas as pd
 # ページ設定
 st.set_page_config(page_title="PDF解析ツール", layout="centered")
 
-# --- 「脱・黒」！明るい青と白の視認性重視デザイン ---
+# --- ダークモードでも強制的に色を固定するスタイル設定 ---
 st.markdown("""
     <style>
-    /* 背景を完全に白に固定（ダークモードを無効化） */
+    /* 1. 全体の背景を落ち着いた薄いグレーに固定 */
     .stApp {
-        background-color: #ffffff !important;
+        background-color: #f4f7f9 !important;
     }
     
-    /* 1. 上のバー（ファイルアップローダー）のデザインを青基調に */
-    [data-testid="stFileUploader"] {
-        border: 2px dashed #007bff !important; /* 青い点線 */
-        background-color: #f0f7ff !important; /* 薄い水色 */
-        border-radius: 10px;
-    }
-    /* アップローダー内の「Drag and drop」などの文字を濃い青に */
-    [data-testid="stFileUploader"] section div {
-        color: #004085 !important;
-    }
-    [data-testid="stFileUploader"] button {
-        background-color: #007bff !important;
-        color: white !important;
-        border: none;
-    }
-
-    /* 2. 下の文字が入っているボックス（カード）を明るく */
+    /* 2. メインコンテンツの白いボックス（文字は常に黒） */
     .main .block-container {
         background-color: #ffffff !important;
+        color: #1a1a1a !important;
         padding: 40px !important;
-        border: 1px solid #dee2e6;
         border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-top: 30px;
     }
 
-    /* 3. すべての文字を「濃い紺色」に固定（黒より読みやすく） */
-    h1, h2, h3, h4, p, span, label, th, td, div {
-        color: #1a3044 !important;
+    /* 3. 上のバー（ファイルアップローダー）を濃い青に固定 */
+    [data-testid="stFileUploader"] {
+        background-color: #1e3a8a !important; /* 濃い青 */
+        border: 2px dashed #3b82f6 !important;
+        border-radius: 10px;
+        padding: 20px;
     }
-
-    /* タイトル：爽やかな青 */
-    h1 {
-        color: #007bff !important;
-        text-align: center;
-        border-bottom: 2px solid #007bff;
-        padding-bottom: 10px;
-        margin-bottom: 30px !important;
-    }
-
-    /* 表のヘッダー：明るい青に白文字 */
-    thead tr th {
-        background-color: #007bff !important;
+    /* バーの中の文字を「白」に固定 */
+    [data-testid="stFileUploader"] section div, 
+    [data-testid="stFileUploader"] label, 
+    [data-testid="stFileUploader"] small {
         color: #ffffff !important;
     }
+    /* アップロードボタンの調整 */
+    [data-testid="stFileUploader"] button {
+        background-color: #ffffff !important;
+        color: #1e3a8a !important;
+        border: none !important;
+    }
 
-    /* メトリック（数字部分） */
+    /* 4. タイトルや見出し */
+    h1 {
+        color: #1e3a8a !important;
+        text-align: center;
+        font-weight: bold;
+        border-bottom: 2px solid #1e3a8a;
+        padding-bottom: 10px;
+    }
+
+    /* 5. 表のヘッダー（濃い青に白文字） */
+    thead tr th {
+        background-color: #1e3a8a !important;
+        color: #ffffff !important;
+    }
+    
+    /* 6. 解析結果の文字色を「黒」に固定 */
+    p, span, td, div.stMarkdown {
+        color: #1a1a1a !important;
+    }
+
+    /* メトリック（基本情報）の数字 */
     [data-testid="stMetricValue"] {
-        color: #007bff !important;
-        font-weight: bold !important;
+        color: #1e3a8a !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 画面レイアウト ---
+# --- 画面構成 ---
 st.title("PDF解析ツール")
 
-# 1. ファイルアップローダー（ここが青いボックスになります）
+# 濃い青色のバー（アップローダー）
 uploaded_file = st.file_uploader("PDFファイルをここにドラッグ＆ドロップしてください", type="pdf", label_visibility="collapsed")
 
 if uploaded_file is not None:
@@ -77,20 +81,20 @@ if uploaded_file is not None:
         file_bytes = uploaded_file.read()
         doc = fitz.open(stream=file_bytes, filetype="pdf")
 
-        # 2. 解析結果表示エリア
         st.write("### 📋 基本情報")
-        c1, c2, c3 = st.columns(3)
+        col1, col2, col3 = st.columns(3)
         ver = doc.metadata.get("format", "Unknown")
-        c1.metric("バージョン", ver)
-        c2.metric("総ページ数", f"{len(doc)}")
-        c3.metric("サイズ", f"{len(file_bytes) / 1024:.1f} KB")
+        
+        col1.metric("バージョン", ver)
+        col2.metric("総ページ数", f"{len(doc)}")
+        col3.metric("サイズ", f"{len(file_bytes) / 1024:.1f} KB")
 
         st.write("---")
 
-        t1, t2 = st.tabs(["🔤 フォント", "🖼️ 画像解像度"])
+        tab1, tab2 = st.tabs(["🔤 フォント", "🖼️ 画像解像度"])
 
-        with t1:
-            st.write("#### 使用フォント")
+        with tab1:
+            st.write("#### 使用フォント一覧")
             f_list = []
             for page in doc:
                 for f in page.get_fonts():
@@ -101,10 +105,10 @@ if uploaded_file is not None:
             if f_list:
                 st.table(pd.DataFrame(f_list).drop_duplicates())
             else:
-                st.info("フォント情報なし")
+                st.info("フォント情報は見つかりませんでした。")
 
-        with t2:
-            st.write("#### 画像解析")
+        with tab2:
+            st.write("#### 画像解析結果")
             i_list = []
             for i, page in enumerate(doc):
                 for img in page.get_image_info(hashes=True):
@@ -112,17 +116,18 @@ if uploaded_file is not None:
                     wi, hi = (b[2]-b[0])/72, (b[3]-b[1])/72
                     dpi = round(max(img["width"]/wi, img["height"]/hi)) if wi>0 else 0
                     i_list.append({
-                        "P.": i+1,
+                        "ページ": i+1,
                         "解像度(DPI)": dpi,
-                        "モード": img.get("colorspace", "N/A"),
-                        "判定": "OK" if dpi>=300 else "⚠️ 低"
+                        "カラーモード": img.get("colorspace", "N/A"),
+                        "判定": "OK" if dpi>=300 else "⚠️ 低解像度"
                     })
             if i_list:
                 st.dataframe(pd.DataFrame(i_list), use_container_width=True)
             else:
-                st.info("画像なし")
+                st.info("画像は見つかりませんでした。")
         doc.close()
+
     except Exception:
-        st.error("解析エラーが発生しました。")
+        st.error("解析中にエラーが発生しました。")
 else:
-    st.markdown("<div style='text-align: center; padding: 50px; color: #007bff;'>PDFを選択すると解析を開始します</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; padding: 60px; color: #1e3a8a; font-weight: bold;'>PDFを選択してください</div>", unsafe_allow_html=True)
