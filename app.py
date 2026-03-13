@@ -1,16 +1,12 @@
 import streamlit as st
-import fitz  # PyMuPDF
-import pandas as pd
 
-# ページ設定
+# ページ設定（これは最初に行う必要があります）
 st.set_page_config(page_title="PDF解析ツール", layout="centered")
 
 # --- デザイン設定（青いバー、白抜き文字、スクロール枠） ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff !important; }
-    
-    /* アップロードバーのデザイン */
     [data-testid="stFileUploader"] {
         background-color: #1e3a8a !important; 
         border: 2px dashed #3b82f6 !important;
@@ -35,14 +31,10 @@ st.markdown("""
         border: none !important;
         font-weight: bold !important;
     }
-
-    /* 文字色と見出し */
     h1, h2, h3, h4, p, span, label, td, .stMarkdown { color: #000000 !important; }
     h1, h3 { color: #1e3a8a !important; }
     h1 { text-align: center; margin-bottom: 30px !important; }
-    
     .section-box { margin-top: 30px; padding-top: 20px; border-top: 2px solid #f0f2f6; }
-
     thead tr th { background-color: #1e3a8a !important; color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -52,6 +44,10 @@ st.title("PDF解析ツール")
 uploaded_file = st.file_uploader("PDFアップロード", type="pdf", label_visibility="collapsed")
 
 if uploaded_file is not None:
+    # --- 遅延インポート（解析が始まってから重いライブラリを読み込む） ---
+    import fitz  # PyMuPDF
+    import pandas as pd
+
     try:
         file_bytes = uploaded_file.read()
         doc = fitz.open(stream=file_bytes, filetype="pdf")
@@ -63,21 +59,24 @@ if uploaded_file is not None:
         col2.metric("総ページ数", len(doc))
         col3.metric("容量", f"{len(file_bytes) / 1024:.1f} KB")
 
-        # --- 1. ページサイズ確認（各ボックス） ---
+        # --- 1. ページサイズ確認 (mm) ---
         st.markdown("<div class='section-box'></div>", unsafe_allow_html=True)
         st.write("### 📐 ページサイズ確認 (mm)")
         p_sizes = []
         for i in range(len(doc)):
             page = doc[i]
-            # 各ボックスの取得（ptからmmに変換: 1pt = 25.4/72 mm）
+            # 各ボックス（MediaBox, CropBox, TrimBox, ArtBox, BleedBox）
             def get_mm(rect):
-                return f"{rect.width * 25.4 / 72:.1f} x {rect.height * 25.4 / 72:.1f}"
+                if rect:
+                    return f"{rect.width * 25.4 / 72:.1f} x {rect.height * 25.4 / 72:.1f}"
+                return "未設定"
 
             p_sizes.append({
                 "P.": i + 1,
-                "メディア (用紙)": get_mm(page.rect),
-                "トリム (仕上がり)": get_mm(page.cropbox), # 一般的にCropBoxが仕上がりとして扱われることが多い
-                "アート (内容)": get_mm(page.artbox) if hasattr(page, "artbox") else "未設定"
+                "メディア(用紙)": get_mm(page.mediabox),
+                "トリム(仕上がり)": get_mm(page.trimbox) if page.trimbox else get_mm(page.cropbox),
+                "アート(内容)": get_mm(page.artbox),
+                "ブリード(塗り足し)": get_mm(page.bleedbox)
             })
         st.dataframe(pd.DataFrame(p_sizes), use_container_width=True, height=200)
 
@@ -118,7 +117,7 @@ if uploaded_file is not None:
             st.info("フォント情報は見つかりませんでした。")
 
         doc.close()
-    except Exception:
-        st.error("解析中に問題が発生しました。")
+    except Exception as e:
+        st.error(f"解析中に問題が発生しました。")
 else:
     st.markdown("<p style='text-align: center; font-weight: bold; color: #1e3a8a; padding: 40px;'>上の青い枠にPDFをドロップしてください</p>", unsafe_allow_html=True)
