@@ -5,18 +5,26 @@ import pandas as pd
 # ページ設定
 st.set_page_config(page_title="PDF解析ツール", layout="centered")
 
-# --- デザイン設定（青いバー、白抜き文字、アイコン等） ---
+# --- デザイン設定（青いバー、白抜き文字、スクロール枠の固定） ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff !important; }
+    
+    /* アップロードバーのデザイン */
     [data-testid="stFileUploader"] {
         background-color: #1e3a8a !important; 
         border: 2px dashed #3b82f6 !important;
         border-radius: 12px;
         padding: 30px 20px !important;
     }
-    [data-testid="stFileUploader"] section { background-color: #1e3a8a !important; border: none !important; }
-    [data-testid="stFileUploader"] svg { fill: #ffffff !important; color: #ffffff !important; }
+    [data-testid="stFileUploader"] section {
+        background-color: #1e3a8a !important;
+        border: none !important;
+    }
+    [data-testid="stFileUploader"] svg {
+        fill: #ffffff !important;
+        color: #ffffff !important;
+    }
     [data-testid="stFileUploader"] section > div > div > span { display: none !important; }
     [data-testid="stFileUploader"] section > div > div::before {
         content: "ここにPDFをドロップ";
@@ -33,11 +41,24 @@ st.markdown("""
         border: none !important;
         font-weight: bold !important;
     }
+
+    /* 文字色と見出しの固定 */
     h1, h2, h3, h4, p, span, label, td, .stMarkdown { color: #000000 !important; }
     h1, h3 { color: #1e3a8a !important; }
     h1 { text-align: center; margin-bottom: 30px !important; }
-    .section-box { margin-top: 40px; padding: 20px; border-top: 2px solid #f0f2f6; }
-    thead tr th { background-color: #1e3a8a !important; color: #ffffff !important; }
+    
+    /* セクションの区切り */
+    .section-box {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #f0f2f6;
+    }
+
+    /* テーブルヘッダーのデザイン */
+    thead tr th {
+        background-color: #1e3a8a !important;
+        color: #ffffff !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -61,14 +82,9 @@ if uploaded_file is not None:
         st.markdown("<div class='section-box'></div>", unsafe_allow_html=True)
         st.write("### 🖼️ 画像解析")
         i_list = []
-        
         for i, page in enumerate(doc):
-            # ページ内のすべての画像要素をリストアップ（より広い抽出方法）
-            img_list = page.get_image_info(hashes=True)
-            
-            for img in img_list:
-                xref = img.get("xref", 0)
-                
+            img_info_list = page.get_image_info(hashes=True)
+            for img in img_info_list:
                 # カラーモード判定
                 cs = img.get("colorspace", 0)
                 bpc = img.get("bpc", 8)
@@ -91,9 +107,10 @@ if uploaded_file is not None:
                 })
 
         if i_list:
-            st.dataframe(pd.DataFrame(i_list), use_container_width=True)
+            # 高さを 300px に固定してスクロール可能に
+            st.dataframe(pd.DataFrame(i_list), use_container_width=True, height=300)
         else:
-            st.warning("画像オブジェクトとして認識されるデータが見つかりませんでした。※図形(パス)で描かれたロゴなどは抽出されません。")
+            st.info("画像オブジェクトは見つかりませんでした。")
 
         # --- 下段：フォント確認 ---
         st.markdown("<div class='section-box'></div>", unsafe_allow_html=True)
@@ -108,7 +125,8 @@ if uploaded_file is not None:
         
         if f_list:
             df_fonts = pd.DataFrame(f_list).drop_duplicates().reset_index(drop=True)
-            st.table(df_fonts)
+            # フォントも dataframe を使用して高さ 300px のスクロール窓に固定
+            st.dataframe(df_fonts, use_container_width=True, height=300)
         else:
             st.info("フォント情報は見つかりませんでした。")
 
